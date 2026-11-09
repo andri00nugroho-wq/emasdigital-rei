@@ -1,7 +1,5 @@
 # Raja Emas Indonesia — Website & CMS
 
-Situs publik dan panel CMS untuk **Raja Emas Indonesia**, platform emas digital. Seluruh funnel situs diarahkan ke unduhan aplikasi Raja Emas di Google Play dan App Store — situs tidak menjual emas langsung dan tidak memakai CTA WhatsApp.
-
 ## Fitur
 
 - **Situs publik** — beranda, produk, harga & grafik, artikel, tentang, kontak, kebijakan privasi, syarat & ketentuan, serta halaman unduhan aplikasi.
