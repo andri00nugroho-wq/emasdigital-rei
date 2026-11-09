@@ -1,9 +1,14 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  cacheComponents: true,
-  partialPrefetching: true,
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/logo-rei-2.png" }];
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "16mb",
+    },
+  },
   turbopack: {
     rules: {
       "*.css": {
