@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
+const siteUrl = process.env.SITE_URL || "http://web-emdig.test";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("http://web-emdig.test"),
+  metadataBase: new URL(siteUrl),
   title: {
     default: "Raja Emas Indonesia — Emas Digital Premium",
     template: "%s | Raja Emas Indonesia",
