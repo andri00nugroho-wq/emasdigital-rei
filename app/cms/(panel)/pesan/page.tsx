@@ -19,10 +19,10 @@ export default async function CmsMessagesPage({
 
   const [messages, unreadRows] = await Promise.all([
     query<ContactMessage>(
-      `SELECT * FROM contact_messages ${filter === "unread" ? "WHERE is_read = 0" : filter === "read" ? "WHERE is_read = 1" : ""}
+      `SELECT * FROM contact_messages ${filter === "unread" ? "WHERE is_read = FALSE" : filter === "read" ? "WHERE is_read = TRUE" : ""}
        ORDER BY is_read ASC, created_at DESC LIMIT 200`
     ),
-    query<{ n: number }>("SELECT COUNT(*) AS n FROM contact_messages WHERE is_read = 0"),
+    query<{ n: number }>("SELECT COUNT(*) AS n FROM contact_messages WHERE is_read = FALSE"),
   ]);
   const unread = Number(unreadRows[0]?.n ?? 0);
 

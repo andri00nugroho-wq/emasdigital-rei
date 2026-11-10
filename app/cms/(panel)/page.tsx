@@ -39,23 +39,23 @@ export default async function CmsDashboard() {
     bannersTotal,
     s,
   ] = await Promise.all([
-    queryOne<{ c: number }>("SELECT COUNT(*) c FROM products WHERE is_active = 1"),
+    queryOne<{ c: number }>("SELECT COUNT(*) c FROM products WHERE is_active = TRUE"),
     queryOne<{ c: number }>("SELECT COUNT(*) c FROM products"),
     queryOne<{ c: number }>("SELECT COUNT(*) c FROM articles"),
     queryOne<{ c: number }>("SELECT COUNT(*) c FROM articles WHERE status = 'published'"),
-    queryOne<{ c: number }>("SELECT COUNT(*) c FROM contact_messages WHERE is_read = 0"),
+    queryOne<{ c: number }>("SELECT COUNT(*) c FROM contact_messages WHERE is_read = FALSE"),
     queryOne<{ c: number }>("SELECT COUNT(*) c FROM contact_messages"),
     getLatestPrice(),
     getPreviousPrice(),
-    query<{ id: number; name: string; subject: string | null; message: string; is_read: number; created_at: string }>(
+    query<{ id: number; name: string; subject: string | null; message: string; is_read: boolean; created_at: string }>(
       "SELECT id, name, subject, message, is_read, created_at FROM contact_messages ORDER BY created_at DESC LIMIT 4"
     ),
     query<{ id: number; title: string; status: string; category: string; published_at: string | null }>(
       "SELECT id, title, status, category, published_at FROM articles ORDER BY id DESC LIMIT 4"
     ),
     queryOne<{ c: number }>("SELECT COUNT(*) c FROM downloads"),
-    queryOne<{ c: number }>("SELECT COUNT(*) c FROM faqs WHERE is_active = 1"),
-    queryOne<{ c: number }>("SELECT COUNT(*) c FROM banners WHERE is_active = 1"),
+    queryOne<{ c: number }>("SELECT COUNT(*) c FROM faqs WHERE is_active = TRUE"),
+    queryOne<{ c: number }>("SELECT COUNT(*) c FROM banners WHERE is_active = TRUE"),
     getSettings(),
   ]);
 

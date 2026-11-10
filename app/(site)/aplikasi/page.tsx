@@ -102,7 +102,7 @@ const appFaqs: Faq[] = [
     answer:
       "Ya. Aplikasi dapat diunduh dan digunakan secara gratis. Tidak ada biaya bulanan untuk menyimpan saldo emas digital Anda.",
     sort_order: 1,
-    is_active: 1,
+    is_active: true,
   },
   {
     id: 9002,
@@ -110,7 +110,7 @@ const appFaqs: Faq[] = [
     answer:
       "Situs ini membantu Anda memahami produk, harga, dan panduan. Transaksi beli, jual, dan cetak emas fisik dilakukan melalui aplikasi agar akun dan data transaksi Anda terlindungi.",
     sort_order: 2,
-    is_active: 1,
+    is_active: true,
   },
   {
     id: 9003,
@@ -118,7 +118,7 @@ const appFaqs: Faq[] = [
     answer:
       "Anda bisa mulai dari 0,1 gram dengan nominal yang mengikuti harga emas hari ini. Harga final mengikuti konfirmasi saat transaksi.",
     sort_order: 3,
-    is_active: 1,
+    is_active: true,
   },
   {
     id: 9004,
@@ -126,7 +126,7 @@ const appFaqs: Faq[] = [
     answer:
       "Bisa. Saldo emas digital dapat dicetak menjadi batangan fisik bersertifikat melalui menu Cetak di aplikasi, dengan pecahan yang tersedia.",
     sort_order: 4,
-    is_active: 1,
+    is_active: true,
   },
   {
     id: 9005,
@@ -134,7 +134,7 @@ const appFaqs: Faq[] = [
     answer:
       "Aplikasi tersedia untuk Android melalui Google Play dan iPhone melalui App Store. Pastikan sistem operasi perangkat Anda sudah diperbarui.",
     sort_order: 5,
-    is_active: 1,
+    is_active: true,
   },
 ];
 

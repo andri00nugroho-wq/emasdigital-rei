@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import PDFDocument from "pdfkit";
-import mysql from "mysql2/promise";
+import { Client } from "pg";
 
 const OUT = path.join(process.cwd(), "public", "downloads");
 fs.mkdirSync(OUT, { recursive: true });
@@ -433,17 +433,20 @@ function buildChecklist() {
    3. Katalog Produk (uses live DB prices)
    ============================================================ */
 async function buildCatalog() {
-  const conn = await mysql.createConnection({
+  const conn = new Client({
     host: process.env.DB_HOST || "127.0.0.1",
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USER || "root",
+    port: Number(process.env.DB_PORT || 5432),
+    user: process.env.DB_USER || "postgres",
     password: process.env.DB_PASSWORD || "",
     database: process.env.DB_NAME || "web_emdig",
+    options: "-c timezone=Asia/Jakarta",
+    ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
   });
-  const [products] = await conn.query(
-    "SELECT name, category, weight_gram, price, buyback_price, short_desc FROM products WHERE is_active = 1 ORDER BY category, weight_gram"
+  await conn.connect();
+  const { rows: products } = await conn.query(
+    "SELECT name, category, weight_gram, price, buyback_price, short_desc FROM products WHERE is_active = TRUE ORDER BY category, weight_gram"
   );
-  const [priceRows] = await conn.query("SELECT buy_price, sell_price, price_date FROM gold_prices ORDER BY price_date DESC LIMIT 1");
+  const { rows: priceRows } = await conn.query("SELECT buy_price, sell_price, price_date FROM gold_prices ORDER BY price_date DESC LIMIT 1");
   await conn.end();
 
   const latest = priceRows[0];

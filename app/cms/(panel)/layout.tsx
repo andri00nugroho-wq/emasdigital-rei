@@ -9,7 +9,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const user = await getSession();
   if (!user) redirect("/cms/login");
 
-  const unread = await queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM contact_messages WHERE is_read = 0");
+  const unread = await queryOne<{ c: number }>("SELECT COUNT(*) AS c FROM contact_messages WHERE is_read = FALSE");
 
   return (
     <CmsShell user={user} unread={Number(unread?.c || 0)}>

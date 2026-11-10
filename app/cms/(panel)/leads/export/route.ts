@@ -24,7 +24,7 @@ export async function GET(request: Request) {
   const where: string[] = [];
   const params: (string | number)[] = [];
   if (q) {
-    where.push("(l.name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)");
+    where.push("(l.name ILIKE ? OR l.phone ILIKE ? OR l.email ILIKE ?)");
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (downloadId) {
@@ -32,7 +32,7 @@ export async function GET(request: Request) {
     params.push(downloadId);
   }
   if (range) {
-    where.push("l.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)");
+    where.push("l.created_at >= NOW() - (?::int * INTERVAL '1 day')");
     params.push(RANGES[range]);
   }
 

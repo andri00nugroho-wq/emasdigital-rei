@@ -14,7 +14,7 @@ type Row = {
   description: string | null;
   file_path: string;
   download_count: number;
-  is_active: number;
+  is_active: boolean;
   leads_count: number;
 };
 

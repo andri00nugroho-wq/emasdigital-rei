@@ -20,7 +20,7 @@ export default async function CmsArticlesPage({
   const where: string[] = [];
   const params: (string | number)[] = [];
   if (q) {
-    where.push("(title LIKE ? OR author LIKE ? OR category LIKE ?)");
+    where.push("(title ILIKE ? OR author ILIKE ? OR category ILIKE ?)");
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (status) {

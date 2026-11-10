@@ -27,7 +27,7 @@ export async function submitLead(_prev: LeadState, formData: FormData): Promise<
 
   const download = downloadId
     ? await queryOne<{ id: number; title: string; file_path: string }>(
-        "SELECT id, title, file_path FROM downloads WHERE id = ? AND is_active = 1",
+        "SELECT id, title, file_path FROM downloads WHERE id = ? AND is_active = TRUE",
         [downloadId]
       )
     : null;

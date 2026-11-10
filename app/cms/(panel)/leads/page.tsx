@@ -24,7 +24,7 @@ export default async function CmsLeadsPage({
   const where: string[] = [];
   const params: (string | number)[] = [];
   if (q) {
-    where.push("(l.name LIKE ? OR l.phone LIKE ? OR l.email LIKE ?)");
+    where.push("(l.name ILIKE ? OR l.phone ILIKE ? OR l.email ILIKE ?)");
     params.push(`%${q}%`, `%${q}%`, `%${q}%`);
   }
   if (downloadId) {
@@ -32,7 +32,7 @@ export default async function CmsLeadsPage({
     params.push(downloadId);
   }
   if (range) {
-    where.push("l.created_at >= DATE_SUB(NOW(), INTERVAL ? DAY)");
+    where.push("l.created_at >= NOW() - (?::int * INTERVAL '1 day')");
     params.push(RANGES[range]);
   }
 
@@ -47,8 +47,8 @@ export default async function CmsLeadsPage({
     query<DownloadItem>("SELECT id, title, download_count FROM downloads ORDER BY id ASC"),
     query<{ total: number; today: number; week: number }>(
       `SELECT COUNT(*) AS total,
-              SUM(created_at >= CURDATE()) AS today,
-              SUM(created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)) AS week
+              COUNT(*) FILTER (WHERE created_at >= CURRENT_DATE) AS today,
+              COUNT(*) FILTER (WHERE created_at >= NOW() - INTERVAL '7 days') AS week
        FROM leads`
     ),
   ]);

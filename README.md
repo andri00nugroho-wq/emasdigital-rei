@@ -14,9 +14,9 @@
 | --- | --- |
 | Framework | Next.js 16.4.5 (App Router, Turbopack) |
 | UI | React 19, TypeScript, Tailwind CSS v4 |
-| Database | MySQL 8 (`mysql2`) |
+| Database | PostgreSQL 16+ (`pg`) |
 | Auth | `jose` (JWT cookie), `bcryptjs` |
-| Deployment | AWS (App Runner + ECR + RDS MySQL) |
+| Deployment | AWS (App Runner + ECR + RDS PostgreSQL) |
 
 ## Struktur singkat
 
@@ -38,7 +38,7 @@ Dockerfile         image produksi (Next.js standalone)
 
 ## Menjalankan lokal
 
-Prasyarat: Node.js 22+, MySQL 8 (Laragon/XAMPP/Docker).
+Prasyarat: Node.js 22+, PostgreSQL 16+ (Laragon/Docker).
 
 1. Install dependensi.
 
@@ -49,8 +49,8 @@ Prasyarat: Node.js 22+, MySQL 8 (Laragon/XAMPP/Docker).
 2. Buat database dan impor skema.
 
    ```bash
-   mysql -u root -p -e "CREATE DATABASE web_emdig CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-   mysql -u root -p web_emdig < db/schema.sql
+   createdb -U postgres web_emdig
+   psql -U postgres -d web_emdig -f db/schema.sql
    ```
 
 3. Salin environment dan isi nilainya.
@@ -79,11 +79,12 @@ Prasyarat: Node.js 22+, MySQL 8 (Laragon/XAMPP/Docker).
 
 | Variabel | Wajib | Keterangan |
 | --- | --- | --- |
-| `DB_HOST` | ya | Host MySQL/RDS |
-| `DB_PORT` | ya | Default `3306` |
+| `DB_HOST` | ya | Host PostgreSQL/RDS |
+| `DB_PORT` | ya | Default `5432` |
 | `DB_USER` | ya | User database |
 | `DB_PASSWORD` | ya | Kata sandi database |
 | `DB_NAME` | ya | Default `web_emdig` |
+| `DB_SSL` | produksi | `true` untuk RDS/SSL, `false` untuk lokal |
 | `AUTH_SECRET` | ya | Kunci penanda tangan cookie sesi. Buat acak, misal `openssl rand -base64 48` |
 | `SITE_URL` | produksi | URL publik, misal `https://rajaemasindonesia.co.id` (dipakai metadata/Open Graph) |
 
@@ -112,25 +113,26 @@ Route 53 / domain
 AWS App Runner (container dari ECR, port 3000)
         │ VPC Connector (private subnet)
         ▼
-Amazon RDS for MySQL (private, tidak public)
+Amazon RDS for PostgreSQL (private, tidak public)
 ```
 
 Region contoh: `ap-southeast-1` (Singapura) untuk latensi Indonesia.
 
 Prasyarat: AWS CLI v2, Docker, dan izin membuat ECR, App Runner, RDS, VPC Connector, serta Route 53/ACM.
 
-### 1. Buat database RDS MySQL
+### 1. Buat database RDS PostgreSQL
 
-1. Buat **RDS for MySQL 8.x** di region yang sama, dengan **Public access: No**.
+1. Buat **RDS for PostgreSQL 16.x** di region yang sama, dengan **Public access: No**.
 2. Catat endpoint, port, user, dan password.
 3. Buat database `web_emdig`.
 4. Impor skema dari mesin yang berada di VPC yang sama (bastion/EC2), bukan dari internet:
 
    ```bash
-   mysql -h <RDS_ENDPOINT> -u <DB_USER> -p web_emdig < db/schema.sql
+   psql "host=<RDS_ENDPOINT> port=5432 dbname=web_emdig user=<DB_USER> sslmode=require" \
+     -f db/schema.sql
    ```
 
-5. Security group RDS: izinkan port `3306` hanya dari security group VPC Connector App Runner.
+5. Security group RDS: izinkan port `5432` hanya dari security group VPC Connector App Runner.
 
 ### 2. Build dan push image ke Amazon ECR
 
@@ -164,10 +166,11 @@ docker push \
 
    ```
    DB_HOST=<RDS_ENDPOINT>
-   DB_PORT=3306
+   DB_PORT=5432
    DB_USER=<DB_USER>
    DB_PASSWORD=<DB_PASSWORD>
    DB_NAME=web_emdig
+   DB_SSL=true
    AUTH_SECRET=<hasil openssl rand -base64 48>
    SITE_URL=https://<domain-anda>
    ```

@@ -1,38 +1,75 @@
 import fs from "node:fs";
 import path from "node:path";
-import mysql from "mysql2/promise";
+import { Client } from "pg";
 import bcrypt from "bcryptjs";
 
 const DB = {
   host: process.env.DB_HOST || "127.0.0.1",
-  port: Number(process.env.DB_PORT || 3306),
-  user: process.env.DB_USER || "root",
+  port: Number(process.env.DB_PORT || 5432),
+  user: process.env.DB_USER || "postgres",
   password: process.env.DB_PASSWORD || "",
   database: process.env.DB_NAME || "web_emdig",
-  multipleStatements: true,
+  options: "-c timezone=Asia/Jakarta",
+  ssl: process.env.DB_SSL === "true" ? { rejectUnauthorized: false } : undefined,
 };
 
 const root = process.cwd();
-const conn = await mysql.createConnection(DB);
-console.log("Connected to MySQL", DB.database);
+const conn = new Client(DB);
+await conn.connect();
+console.log("Connected to PostgreSQL", DB.database);
+
+function toPgPlaceholders(sql) {
+  let out = "";
+  let n = 0;
+  let inString = false;
+  for (let i = 0; i < sql.length; i++) {
+    const ch = sql[i];
+    if (ch === "'") inString = !inString;
+    if (ch === "?" && !inString) {
+      n += 1;
+      out += `$${n}`;
+    } else {
+      out += ch;
+    }
+  }
+  return out;
+}
+
+async function q(sql, params = []) {
+  return conn.query(toPgPlaceholders(sql), params);
+}
+
+async function insertRows(table, columns, rows) {
+  if (!rows.length) return;
+  const values = [];
+  const tuples = rows.map((row) => {
+    const marks = row.map((value) => {
+      values.push(value);
+      return `$${values.length}`;
+    });
+    return `(${marks.join(",")})`;
+  });
+  await conn.query(
+    `INSERT INTO ${table} (${columns.join(",")}) VALUES ${tuples.join(",")}`,
+    values
+  );
+}
 
 const schema = fs.readFileSync(path.join(root, "db/schema.sql"), "utf8");
 await conn.query(schema);
 console.log("Schema ready");
 
-await conn.query("SET FOREIGN_KEY_CHECKS = 0");
-for (const t of ["leads", "downloads", "articles", "gold_prices", "products", "banners", "faqs", "contact_messages", "settings", "admin_users"]) {
-  await conn.query(`TRUNCATE TABLE ${t}`);
-}
-await conn.query("SET FOREIGN_KEY_CHECKS = 1");
+await conn.query(
+  `TRUNCATE TABLE leads, downloads, articles, gold_prices, products, banners, faqs, contact_messages, settings, admin_users RESTART IDENTITY CASCADE`
+);
 
 // ---------- admin ----------
 const hash = await bcrypt.hash("AdminREI2026!", 10);
-await conn.query(
+await q(
   "INSERT INTO admin_users (name, email, password_hash, role) VALUES (?,?,?,?)",
   ["Super Admin", "admin@rajaemasindonesia.co.id", hash, "superadmin"]
 );
-await conn.query(
+await q(
   "INSERT INTO admin_users (name, email, password_hash, role) VALUES (?,?,?,?)",
   ["Content Editor", "editor@rajaemasindonesia.co.id", await bcrypt.hash("EditorREI2026!", 10), "editor"]
 );
@@ -79,44 +116,43 @@ const settings = {
 };
 
 for (const [k, v] of Object.entries(settings)) {
-  await conn.query("INSERT INTO settings (setting_key, setting_value) VALUES (?,?)", [k, v]);
+  await q("INSERT INTO settings (setting_key, setting_value) VALUES (?,?)", [k, v]);
 }
 
 // ---------- banners ----------
-await conn.query(
-  `INSERT INTO banners (kicker, title, subtitle, image, cta_label, cta_url, is_active, sort_order) VALUES ?`,
+await insertRows(
+  "banners",
+  ["kicker", "title", "subtitle", "image", "cta_label", "cta_url", "is_active", "sort_order"],
   [
     [
-      [
-        "Aplikasi resmi Raja Emas Indonesia",
-        "Emas digital, dalam genggam Anda.",
-        "Beli, jual, dan cetak emas fisik lewat aplikasi Raja Emas — mulai 0,1 gram dengan harga transparan, semua dari ponsel.",
-        "/images/hero-gold.png",
-        "Unduh aplikasi",
-        "/aplikasi",
-        1,
-        1,
-      ],
-      [
-        "Harga emas hari ini",
-        "Pantau harga, ambil keputusan dari aplikasi.",
-        "Harga beli dan buyback diperbarui setiap hari. Semua transaksi aman, tercatat, dan bisa dipantau dari ponsel.",
-        "/images/hero-gold.png",
-        "Lihat harga hari ini",
-        "/harga",
-        1,
-        2,
-      ],
-      [
-        "Visi kami",
-        "Menuju aplikasi emas digital No. 1 di Indonesia.",
-        "Kami membangun pengalaman emas digital yang aman, transparan, dan mudah dipakai siapa saja — dari gram pertama.",
-        "/images/hero-gold.png",
-        "Kenali aplikasinya",
-        "/aplikasi",
-        1,
-        3,
-      ],
+      "Aplikasi resmi Raja Emas Indonesia",
+      "Emas digital, dalam genggam Anda.",
+      "Beli, jual, dan cetak emas fisik lewat aplikasi Raja Emas — mulai 0,1 gram dengan harga transparan, semua dari ponsel.",
+      "/images/hero-gold.png",
+      "Unduh aplikasi",
+      "/aplikasi",
+      true,
+      1,
+    ],
+    [
+      "Harga emas hari ini",
+      "Pantau harga, ambil keputusan dari aplikasi.",
+      "Harga beli dan buyback diperbarui setiap hari. Semua transaksi aman, tercatat, dan bisa dipantau dari ponsel.",
+      "/images/hero-gold.png",
+      "Lihat harga hari ini",
+      "/harga",
+      true,
+      2,
+    ],
+    [
+      "Visi kami",
+      "Menuju aplikasi emas digital No. 1 di Indonesia.",
+      "Kami membangun pengalaman emas digital yang aman, transparan, dan mudah dipakai siapa saja — dari gram pertama.",
+      "/images/hero-gold.png",
+      "Kenali aplikasinya",
+      "/aplikasi",
+      true,
+      3,
     ],
   ]
 );
@@ -241,7 +277,7 @@ const products = [
 
 for (let i = 0; i < products.length; i++) {
   const p = products[i];
-  await conn.query(
+  await q(
     `INSERT INTO products (slug, name, category, weight_gram, price, buyback_price, badge, short_desc, description, features, image, is_featured, is_active, sort_order)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     [
@@ -256,8 +292,8 @@ for (let i = 0; i < products.length; i++) {
       `<p>${p.short}</p><p>${p.name} diterbitkan dalam satuan emas murni 999,9 dan tercatat atas nama Anda. Saldo dapat dipantau kapan saja, dijual kembali dengan harga buyback harian, atau dicetak menjadi emas batangan fisik melalui layanan cetak emas.</p><h3>Mengapa memilih produk ini?</h3><p>Pecahan ini cocok untuk investor yang ingin membangun portofolio secara bertahap. Dengan pembelian rutin, Anda memanfaatkan rata-rata harga (dollar-cost averaging) sehingga tidak perlu menebak waktu terbaik membeli emas.</p><p><strong>Catatan:</strong> harga produk dapat berubah mengikuti harga emas harian. Harga final dikonfirmasi pada saat transaksi.</p>`,
       JSON.stringify(p.features),
       productImages[p.category],
-      p.featured,
-      1,
+      Boolean(p.featured),
+      true,
       i,
     ]
   );
@@ -285,7 +321,7 @@ for (let i = days - 1; i >= 0; i--) {
   const buyback = Math.round((price * (0.9555 + rnd() * 0.008)) / 1000) * 1000;
   rows.push([d.toISOString().slice(0, 10), price, buyback]);
 }
-await conn.query("INSERT INTO gold_prices (price_date, buy_price, sell_price) VALUES ?", [rows]);
+await insertRows("gold_prices", ["price_date", "buy_price", "sell_price"], rows);
 console.log("Gold prices:", rows.length);
 
 // ---------- articles ----------
@@ -381,7 +417,7 @@ for (let i = 0; i < articles.length; i++) {
   const a = articles[i];
   const d = new Date();
   d.setDate(d.getDate() - i * 9 - 2);
-  await conn.query(
+  await q(
     `INSERT INTO articles (slug,title,excerpt,content,cover,category,author,status,views,published_at) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     [a.slug, a.title, a.excerpt, a.content, a.cover, a.category, "Tim Raja Emas", "published", 480 + i * 137, d]
   );
@@ -413,8 +449,8 @@ const downloads = [
   },
 ];
 for (const d of downloads) {
-  await conn.query(
-    "INSERT INTO downloads (slug,title,description,file_path,download_count,is_active) VALUES (?,?,?,?,?,1)",
+  await q(
+    "INSERT INTO downloads (slug,title,description,file_path,download_count,is_active) VALUES (?,?,?,?,?,TRUE)",
     [d.slug, d.title, d.description, d.file, d.count]
   );
 }
@@ -437,20 +473,20 @@ for (let i = 0; i < 48; i++) {
   const name = names[i % names.length];
   const email = name.toLowerCase().replace(/[^a-z]/g, ".") + "@example.com";
   const phone = "08" + String(1200000000 + Math.floor(lrnd() * 800000000));
-  await conn.query(
+  await q(
     "INSERT INTO leads (name, phone, email, download_id, source, created_at) VALUES (?,?,?,?,?,?)",
     [name, phone, email, 1 + (i % 3), sources[i % sources.length], d]
   );
 }
 
 // ---------- contact messages ----------
-await conn.query(
+await q(
   "INSERT INTO contact_messages (name,email,phone,subject,message,is_read,created_at) VALUES (?,?,?,?,?,?,?)",
-  ["Dian Puspita", "dian@example.com", "081234567890", "Cara cetak emas fisik", "Halo, saya ingin tahu berapa minimal saldo untuk mencetak emas 1 gram dan berapa lama prosesnya. Terima kasih.", 0, new Date()]
+  ["Dian Puspita", "dian@example.com", "081234567890", "Cara cetak emas fisik", "Halo, saya ingin tahu berapa minimal saldo untuk mencetak emas 1 gram dan berapa lama prosesnya. Terima kasih.", false, new Date()]
 );
-await conn.query(
+await q(
   "INSERT INTO contact_messages (name,email,phone,subject,message,is_read,created_at) VALUES (?,?,?,?,?,?,?)",
-  ["Rudi Hartono", "rudi@example.com", "081298765432", "Kerja sama korporasi", "Kami tertarik mengadakan program hadiah emas untuk karyawan. Mohon informasi paket korporasi.", 1, new Date()]
+  ["Rudi Hartono", "rudi@example.com", "081298765432", "Kerja sama korporasi", "Kami tertarik mengadakan program hadiah emas untuk karyawan. Mohon informasi paket korporasi.", true, new Date()]
 );
 
 // ---------- faqs ----------
@@ -463,7 +499,7 @@ const faqs = [
   ["Apakah ada biaya penyimpanan?", "Untuk produk emas digital, tidak ada biaya penyimpanan bulanan. Biaya yang berlaku adalah spread transaksi dan biaya tambahan bila Anda mencetak emas fisik."],
 ];
 for (let i = 0; i < faqs.length; i++) {
-  await conn.query("INSERT INTO faqs (question,answer,sort_order,is_active) VALUES (?,?,?,1)", [...faqs[i], i]);
+  await q("INSERT INTO faqs (question,answer,sort_order,is_active) VALUES (?,?,?,TRUE)", [...faqs[i], i]);
 }
 
 await conn.end();

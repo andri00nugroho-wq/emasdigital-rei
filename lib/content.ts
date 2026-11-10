@@ -41,9 +41,9 @@ export async function getPriceSeries(days = 90): Promise<GoldPrice[]> {
 }
 
 export async function getProducts(opts: { featured?: boolean; category?: string } = {}): Promise<Product[]> {
-  const where = ["is_active = 1"];
+  const where = ["is_active = TRUE"];
   const params: unknown[] = [];
-  if (opts.featured) where.push("is_featured = 1");
+  if (opts.featured) where.push("is_featured = TRUE");
   if (opts.category && opts.category !== "semua") {
     where.push("category = ?");
     params.push(opts.category);
@@ -66,7 +66,7 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
 
 export async function getRelatedProducts(slug: string, category: string): Promise<Product[]> {
   const rows = await query<Product & { features: unknown }>(
-    "SELECT * FROM products WHERE is_active = 1 AND slug <> ? AND category = ? ORDER BY sort_order LIMIT 3",
+    "SELECT * FROM products WHERE is_active = TRUE AND slug <> ? AND category = ? ORDER BY sort_order LIMIT 3",
     [slug, category]
   );
   return rows.map((r) => ({ ...r, features: parseFeatures(r.features) }));
@@ -92,14 +92,14 @@ export async function getArticleBySlug(slug: string): Promise<Article | null> {
 export async function getDownloads(): Promise<DownloadItem[]> {
   return query<DownloadItem>(
     `SELECT d.*, (SELECT COUNT(*) FROM leads l WHERE l.download_id = d.id) AS leads_count
-     FROM downloads d WHERE d.is_active = 1 ORDER BY d.id ASC`
+     FROM downloads d WHERE d.is_active = TRUE ORDER BY d.id ASC`
   );
 }
 
 export async function getFaqs(): Promise<Faq[]> {
-  return query<Faq>("SELECT * FROM faqs WHERE is_active = 1 ORDER BY sort_order ASC, id ASC");
+  return query<Faq>("SELECT * FROM faqs WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC");
 }
 
 export async function getBanners(): Promise<Banner[]> {
-  return query<Banner>("SELECT * FROM banners WHERE is_active = 1 ORDER BY sort_order ASC, id ASC");
+  return query<Banner>("SELECT * FROM banners WHERE is_active = TRUE ORDER BY sort_order ASC, id ASC");
 }

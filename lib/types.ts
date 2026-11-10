@@ -18,8 +18,8 @@ export type Product = {
   description: string | null;
   features: string[];
   image: string | null;
-  is_featured: number;
-  is_active: number;
+  is_featured: boolean;
+  is_active: boolean;
   sort_order: number;
 };
 
@@ -46,7 +46,7 @@ export type DownloadItem = {
   file_path: string;
   cover: string | null;
   download_count: number;
-  is_active: number;
+  is_active: boolean;
   created_at: string;
   leads_count?: number;
 };
@@ -69,7 +69,7 @@ export type ContactMessage = {
   phone: string | null;
   subject: string | null;
   message: string;
-  is_read: number;
+  is_read: boolean;
   created_at: string;
 };
 
@@ -81,7 +81,7 @@ export type Banner = {
   image: string | null;
   cta_label: string | null;
   cta_url: string | null;
-  is_active: number;
+  is_active: boolean;
   sort_order: number;
 };
 
@@ -90,5 +90,5 @@ export type Faq = {
   question: string;
   answer: string;
   sort_order: number;
-  is_active: number;
+  is_active: boolean;
 };

@@ -36,8 +36,8 @@ function int(fd: FormData, key: string, fallback = 0): number {
   const n = Number(String(fd.get(key) || "").replace(/[^\d-]/g, ""));
   return Number.isFinite(n) ? n : fallback;
 }
-function bool(fd: FormData, key: string): number {
-  return fd.get(key) === "on" || fd.get(key) === "1" ? 1 : 0;
+function bool(fd: FormData, key: string): boolean {
+  return fd.get(key) === "on" || fd.get(key) === "1";
 }
 
 // ---------------- auth ----------------
@@ -128,7 +128,7 @@ export async function deleteProduct(fd: FormData) {
 
 export async function toggleProduct(fd: FormData) {
   await requireUser();
-  await execute("UPDATE products SET is_active = 1 - is_active WHERE id = ?", [int(fd, "id")]);
+  await execute("UPDATE products SET is_active = NOT is_active WHERE id = ?", [int(fd, "id")]);
   revalidatePath("/produk");
   redirect("/cms/produk");
 }
@@ -143,7 +143,7 @@ export async function savePrice(fd: FormData) {
 
   await execute(
     `INSERT INTO gold_prices (price_date, buy_price, sell_price) VALUES (?,?,?)
-     ON DUPLICATE KEY UPDATE buy_price=VALUES(buy_price), sell_price=VALUES(sell_price)`,
+     ON CONFLICT (price_date) DO UPDATE SET buy_price=EXCLUDED.buy_price, sell_price=EXCLUDED.sell_price`,
     [date, buy, sell]
   );
   revalidatePath("/");
@@ -214,7 +214,7 @@ export async function deleteArticle(fd: FormData) {
 export async function toggleArticle(fd: FormData) {
   await requireUser();
   await execute(
-    "UPDATE articles SET status = IF(status='published','draft','published'), published_at = IF(published_at IS NULL, NOW(), published_at) WHERE id = ?",
+    "UPDATE articles SET status = CASE WHEN status = 'published' THEN 'draft' ELSE 'published' END, published_at = COALESCE(published_at, NOW()) WHERE id = ?",
     [int(fd, "id")]
   );
   revalidatePath("/artikel");
@@ -263,7 +263,7 @@ export async function deleteBanner(fd: FormData) {
 
 export async function toggleBanner(fd: FormData) {
   await requireUser();
-  await execute("UPDATE banners SET is_active = 1 - is_active WHERE id = ?", [int(fd, "id")]);
+  await execute("UPDATE banners SET is_active = NOT is_active WHERE id = ?", [int(fd, "id")]);
   revalidatePath("/");
   redirect("/cms/banner");
 }
@@ -316,7 +316,7 @@ export async function deleteLead(fd: FormData) {
 // ---------------- messages ----------------
 export async function toggleMessage(fd: FormData) {
   await requireUser();
-  await execute("UPDATE contact_messages SET is_read = 1 - is_read WHERE id = ?", [int(fd, "id")]);
+  await execute("UPDATE contact_messages SET is_read = NOT is_read WHERE id = ?", [int(fd, "id")]);
   redirect("/cms/pesan");
 }
 
@@ -332,7 +332,7 @@ export async function saveFaq(fd: FormData) {
   const question = str(fd, "question");
   const answer = str(fd, "answer");
   if (question && answer) {
-    await execute("INSERT INTO faqs (question, answer, sort_order, is_active) VALUES (?,?,?,1)", [question, answer, int(fd, "sort_order")]);
+    await execute("INSERT INTO faqs (question, answer, sort_order, is_active) VALUES (?,?,?,TRUE)", [question, answer, int(fd, "sort_order")]);
   }
   revalidatePath("/");
   redirect("/cms/faq");
@@ -344,7 +344,7 @@ export async function saveFaqBulk(fd: FormData) {
   for (const id of ids) {
     const q = String(fd.get(`q_${id}`) || "").trim();
     const a = String(fd.get(`a_${id}`) || "").trim();
-    const active = fd.get(`active_${id}`) === "on" ? 1 : 0;
+    const active = fd.get(`active_${id}`) === "on";
     if (q && a) {
       await execute("UPDATE faqs SET question=?, answer=?, is_active=? WHERE id=?", [q, a, active, id]);
     }
@@ -372,7 +372,7 @@ export async function saveSettings(fd: FormData) {
   for (const key of keys) {
     const value = str(fd, key);
     await execute(
-      "INSERT INTO settings (setting_key, setting_value) VALUES (?,?) ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)",
+      "INSERT INTO settings (setting_key, setting_value) VALUES (?,?) ON CONFLICT (setting_key) DO UPDATE SET setting_value=EXCLUDED.setting_value",
       [key, value]
     );
   }

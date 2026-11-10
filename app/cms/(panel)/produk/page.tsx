@@ -19,10 +19,10 @@ export default async function CmsProductsPage({
   const q = (sp.q || "").trim();
   const products = await query<{
     id: number; name: string; slug: string; category: string; weight_gram: string; price: number; buyback_price: number;
-    image: string | null; is_active: number; is_featured: number; sort_order: number;
+    image: string | null; is_active: boolean; is_featured: boolean; sort_order: number;
   }>(
     `SELECT id, name, slug, category, weight_gram, price, buyback_price, image, is_active, is_featured, sort_order
-     FROM products ${q ? "WHERE name LIKE ? OR slug LIKE ?" : ""} ORDER BY sort_order ASC, id ASC`,
+     FROM products ${q ? "WHERE name ILIKE ? OR slug ILIKE ?" : ""} ORDER BY sort_order ASC, id ASC`,
     q ? [`%${q}%`, `%${q}%`] : []
   );
 
